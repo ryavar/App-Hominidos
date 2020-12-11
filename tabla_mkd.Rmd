@@ -1,0 +1,665 @@
+---
+#title: "Tablas para informes"
+#author: "Joaquín Alvarez - Matías Parra"
+#date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  word_document:
+    reference_docx: Lorem_ipsum.docx
+---
+```{r setup, include=FALSE,  warning=FALSE}
+knitr::opts_chunk$set(echo = F)
+library(tidyverse)
+library(knitr)
+library(flextable)
+library(officer)
+library(janitor)
+library(scales)
+
+def_cell <- fp_cell(border = fp_border(color="#0068B3")) #color de los bordes de celda
+def_par <- fp_par(text.align = "center") #alineado del texto
+def_text <- fp_text(font.family = "Calibri") #tipo de letra
+def_text_header <- update(def_text, bold = TRUE) #especificaciones del encabezado 
+
+base <- readRDS("C:/Users/M/Desktop/GAC/APP MH/APP/mapa/shpExport1.rds")
+viva <- read_rds("C:/Users/M/Desktop/GAC/APP MH/APP/mapa/shpExport2.rds")
+casen <- read_rds("C:/Users/M/Desktop/GAC/APP MH/APP/mapa/shpExport3.rds")
+friz_regional <- read_rds("C:/Users/M/Desktop/GAC/APP MH/APP/data/esencial/friz_regional.rds")
+friz_regional <- if(v%in%c("ZC_LOC","DC","COMUNA")){
+  list_r <- base %>% 
+    group_by(COMUNA) %>% 
+    summarise() %>% 
+    as.data.frame() %>% 
+    transmute(REGION=as.numeric(COMUNA)%/%1000)
+  return(friz_regional %>% 
+           filter(Friz%in%list_r))
+} else {
+  return(friz_regional %>% 
+           filter(Friz%in%base$REGION))
+}
+
+
+tab1<-if(v=="ZC_LOC"){
+  base %>% 
+    dplyr::select(Comuna=NOM_COMUNA,Distrito=DISTRITO, `Localidad / Zona` =LOC_ZON,Hombre, Mujer,Población=Personas,`Zona`=URBANO,`Localidad`=NOM_LOCALI) %>% 
+    group_by(Comuna, Distrito,`Localidad / Zona`,Zona,`Localidad`) %>% 
+    summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T),Población=sum(Población, na.rm = T)) %>% 
+    as.data.frame() %>% 
+    return()
+}else{
+  if(v=="DC"){
+  base %>% 
+    dplyr::select(Comuna=NOM_COMUNA,Distrito=DISTRITO,Hombre, Mujer,Población=Personas) %>% 
+    group_by(Comuna, Distrito) %>% 
+    summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T),Población=sum(Población, na.rm = T)) %>% 
+    as.data.frame() %>% 
+    return()
+  }else{
+    if(v=="COMUNA"){
+      base %>% 
+        dplyr::select(Región=NOM_REGION,Comuna=NOM_COMUNA,Hombre, Mujer,Personas) %>% 
+        group_by(Región, Comuna) %>% 
+        summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T),Población=sum(Personas, na.rm = T)) %>%
+        as.data.frame() %>% 
+        return()
+      }else{
+        if(v=="PROVINCIA"){
+          base %>% 
+            dplyr::select(Región=NOM_REGION,Provincia=NOM_PROVIN,Hombre, Mujer,Población=Personas) %>% 
+            group_by(Región, Provincia) %>% 
+            summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T),Población=sum(Población, na.rm = T)) %>% 
+            as.data.frame() %>% 
+            return()
+          }else{
+            base %>% 
+              dplyr::select(Región=NOM_REGION,Hombre, Mujer,Población=Personas) %>% 
+              group_by(Región) %>% 
+              summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T),Población=sum(Población, na.rm = T)) %>% 
+              as.data.frame()
+          }
+      }
+  }
+}
+if(v=="ZC_LOC"){
+  urbaru <- base %>% 
+  mutate(Área=case_when(AREA==1~"Urbano",
+                        AREA==2~"Rural")) %>% 
+  dplyr::select(Área,Hombre,Mujer,Personas) %>% 
+  group_by(Área) %>% 
+  summarise(Hombres=sum(Hombre,na.rm = T),Mujeres=sum(Mujer,na.rm = T),Total=sum(Personas,na.rm = T))
+}
+
+masc <- 100*sum(base$Hombre,na.rm=T)/sum(base$Mujer,na.rm=T)
+m <- 100*sum(base$Mujer,na.rm=T)/sum(base$Personas,na.rm=T)
+h <- 100*sum(base$Hombre,na.rm=T)/sum(base$Personas,na.rm=T)
+
+pyr <- base %>% 
+  dplyr::select(-Personas) %>% 
+  gather(Sexo,Personas,"Hombre","Mujer") %>% 
+  group_by(Edad,Sexo=as.factor(Sexo)) %>% 
+  summarise(Personas=sum(Personas, na.rm = T))
+
+friz <- sum(pyr[pyr$Edad %in% c("0-4","5-9","10-14","15-19"),]$Personas,na.rm=T)*100/sum(pyr[pyr$Edad %in% c("30-34","35-39","40-44","45-49"),]$Personas,na.rm=T)
+
+oldness <- sum(pyr[pyr$Edad %in% c("65-69","70-74","75-79","80 o más"),]$Personas,na.rm=T)*100/sum(pyr[pyr$Edad %in% c("0-4","5-9","10-14"),]$Personas,na.rm=T)
+
+joven <- sum(pyr[pyr$Edad %in% c("0-4","5-9","10-14","15-19","20-24","25-29"),]$Personas,na.rm=T)*100/sum(pyr$Personas,na.rm=T)
+
+madura <- sum(pyr[pyr$Edad %in% c("30-34","35-39","40-44","45-49","50-54","55-59","60-64"),]$Personas,na.rm=T)*100/sum(pyr$Personas,na.rm=T)
+
+sundyoung <- sum(pyr[pyr$Edad %in% c("0-4","5-9","10-14"),]$Personas,na.rm = T)/sum(pyr[pyr$Edad %in% c("15-19","20-24","25-29","30-34","35-39","40-44","45-49"),]$Personas,na.rm = T)
+sundold <- sum(pyr[pyr$Edad %in% c("50-54","55-59","60-64","65-69","70-74","75-79","80 o más"),]$Personas,na.rm = T)/sum(pyr[pyr$Edad %in% c("15-19","20-24","25-29","30-34","35-39","40-44","45-49"),]$Personas,na.rm = T)
+  
+p_o <- base %>% 
+  dplyr::select(Pueblo=Ind,Hombre, Mujer) %>% 
+  group_by(Pueblo) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>%
+  as.data.frame() %>%
+  filter(Pueblo!="No aplica / sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+max_po <- p_o[-nrow(p_o),] %>% 
+  filter(Total==max(Total,na.rm = T))
+
+rama_o_t <- base %>% 
+  dplyr::select(Rama,Hombre,Mujer) %>% 
+  group_by(Rama) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>%
+  as.data.frame() %>%
+  filter(Rama!="No aplica / sin información"|Rama!="Rama no declarada") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+rama_o <- base %>% 
+  dplyr::select(Rama,Personas) %>% 
+  group_by(Rama) %>% 
+  summarise(Personas=sum(Personas, na.rm = T))
+
+cat_o <- casen %>% 
+  dplyr::select(`Población de 15 años o más ocupada según Rama de Actividad`=o15_mod, Hogares=Cantidad) %>% 
+  filter(is.na(`Población de 15 años o más ocupada según Rama de Actividad`)==F) %>% 
+  group_by(`Población de 15 años o más ocupada según Rama de Actividad`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  mutate(Porcentajes=Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+p_17 <- base %>% 
+  dplyr::select(`Trabajó esta semana`=P17,Hombre, Mujer) %>% 
+  group_by(`Trabajó esta semana`) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>% 
+  as.data.frame() %>% 
+  filter(`Trabajó esta semana`!="Sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  mutate(`Proporción sobre el total`=100*Total/sum(Total,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+p_n_e <- base %>% 
+  dplyr::select(`Tipo de población`=PNEA,Hombre, Mujer) %>% 
+  group_by(`Tipo de población`) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>% 
+  as.data.frame() %>% 
+  filter(`Tipo de población`!="No aplica / Sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+p_n_e_not <- base %>% 
+  filter(PNEA=="PNEA") %>% 
+  dplyr::select(`Actividad durante la semana`=P17,Hombre, Mujer) %>% 
+  group_by(`Actividad durante la semana`) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>% 
+  as.data.frame() %>% 
+  filter(`Actividad durante la semana`!="No aplica / Sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+Escolar <- base %>% 
+  dplyr::select(Escolaridad=P15,Hombre, Mujer) %>% 
+  group_by(Escolaridad) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>% 
+  as.data.frame() %>% 
+  filter(Escolaridad!="No aplica / Sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+migr5 <- base %>% 
+  dplyr::select(`País de origen`=P11,Hombre, Mujer) %>% 
+  group_by(`País de origen`) %>% 
+  summarise(Hombres=sum(Hombre, na.rm = T),Mujeres=sum(Mujer, na.rm = T)) %>% 
+  as.data.frame() %>% 
+  filter(`País de origen`!="No aplica / Sin información") %>% 
+  adorn_totals(where="col",na.rm=T) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+migr_otro <- migr5 %>% 
+  filter(`País de origen`!="En esta comuna",`País de origen`!="En otra comuna",`País de origen`!="Aún no nacía",`País de origen`!="Total",)
+
+t_v <- viva %>% 
+  dplyr::select(`Tipo de vivienda` = P01_mod, Hogares) %>% 
+  filter(`Tipo de vivienda`!="Missing") %>% 
+  group_by(`Tipo de vivienda`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+paredes <- viva %>% 
+  dplyr::select(`Material de las paredes`=P03A_mod, Hogares) %>% 
+  filter(`Material de las paredes`!="Missing") %>%
+  group_by(`Material de las paredes`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+
+piso <- viva %>% 
+  dplyr::select(`Tipo de piso`=P03C_mod, Hogares) %>% 
+  filter(`Tipo de piso`!="Missing") %>%
+  group_by(`Tipo de piso`) %>%
+  summarise(Hogares=sum(Hogares,na.rm=T)) %>% 
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm=T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+techo <- viva %>% 
+  dplyr::select(`Tipo de techo`=P03B_mod, Hogares) %>%
+  filter(`Tipo de techo`!="Missing") %>% 
+  group_by(`Tipo de techo`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+materialidad <- viva %>%
+  dplyr::select(`Índice de materialidad`=Materialidad, Hogares) %>%
+  filter(`Índice de materialidad`!="Missing"|is.na(`Índice de materialidad`)==F) %>% 
+  group_by(`Índice de materialidad`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+pika <- casen %>% 
+  dplyr::select(`Origen de la electricidad`=v24_mod, Hogares=Cantidad) %>% 
+  group_by(`Origen de la electricidad`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+awa <- viva %>% 
+  filter(P05_mod!="No aplica / Sin información",P05_mod!="Missing") %>% 
+  dplyr::select(`Origen del agua`=P05_mod, Hogares) %>% 
+  group_by(`Origen del agua`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+```
+
+Según la información contenida en el Censo de Población y Vivienda de 2017, la población del área de influencia definida para el proyecto corresponde a `r sum(base$Personas,na.rm=T)` personas, con un índice de masculinidad de `r masc`, lo que corresponde a una `r if(masc<100){paste("mayor proporción de mujeres con un ",format(m,digits=1),"% que de hombres con un ",format(h,digits=1), "%")}else{if(masc>100){paste("mayor proporción de hombres con un ",format(h,digits=1),"% que de mujeres con un ",format(m,digits=1), "%")}else{"proporción igual de mujeres que de hombres"}}`..
+
+```{r personas}
+if(v=="ZC_LOC" & "INDETERMINADA" %in% tab1$Localidad){
+  print("ATENCIÓN: La información contiene una localidad indeterminada.")
+}
+
+tab1 %>% 
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>% 
+  bg(bg = "#BFBFBF", part = "header") %>% 
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines("Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Cantidad de personas registradas en el censo por zona") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) %>% 
+  valign() 
+```
+
+texto
+
+```{r urbaru}
+if(v=="ZC_LOC"){
+  urbaru %>% 
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>% 
+  bg(bg = "#BFBFBF", part = "header") %>% 
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines("Fuente: Censo de Población y Vivienda 2017, INE") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla 1 5. Distribución geográfica de población según sexo, área de influencia XXX") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) %>% 
+  valign() 
+}
+```
+
+
+Sobre la estructura etaria de la población del área de influencia, según la información que concierne al índice de Sundbarg^[Toma como base la población de entre 15 y 49 años, comparando los dos grupos etarios restantes, es decir, la población de 0 a 14 años, con los de 50 años y más. Si el porcentaje de población menor de 15 años supera al porcentaje de población de mayores de 50, se define como una población de carácter progresivo (joven), si los porcentajes son iguales se habla de una población estacionaria (madura) y si el grupo etario de mayores de 50 es mayor al de menores de 15, se define como una población regresiva (vieja).]  que muestra la composición demográfica de la población con el objetivo de determinar el carácter de ésta, se estableció un valor de `r sundyoung` para el primer grupo etario –población menor de 15 años- y un valor de `r sundold` para el segundo grupo etario –población de 50 años y más- por lo tanto, se trata de una población de tipo `r if(sundyoung-sundold>0){return("progresiva")}else{if(sundyoung-sundold<0){return("regresiva")}else{return("estacionaria")}}`, `r if(sundyoung-sundold>0){return("ya que el valor más alto está en la población del primer grupo")}else{if(sundyoung-sundold<0){return("ya que el valor más alto está en la población del segundo grupo")}else{return("ya que los valores son iguales")}}`.
+Al complementar la información piramidal con el índice de Friz, el cual permite definir si la composición demográfica de un lugar está definida por población de tipo joven, madura o vieja; se calculó un valor de XXX; es decir, se trata de una población `r if(friz>160){return("joven")}else{if(friz<60){return("vieja")}else{return("madura")}}`. 
+
+<!--Al complementar la información piramidal con el índice de Friz, el cual permite definir si la composición demográfica de un lugar está definida por población de tipo joven, madura o vieja; se calculó un valor de `r friz`; es decir, se trata de una población . -->
+
+La tasa de envejecimiento del área de influencia, entendida como el grado de envejecimiento de la población, es de . Es decir, había dicha cantidad de personas mayores de 65 años por cada 100 habitantes. Es posible agregar que la población joven tiene una tasa de `r joven` y la población adulta una tasa de `r madura`. 
+
+En la siguiente figura se presenta la pirámide de población.
+
+```{r piramide, fig.align="center"}
+ggplot(pyr, 
+       mapping = aes(x = Edad,
+                     y = ifelse(test = Sexo == "Hombre" , (-Personas)/sum(tab1$Hombres), no = (Personas)/sum(tab1$Mujeres)),
+                     fill = Sexo)) +
+  geom_bar(stat = "identity") +
+  scale_y_continuous(labels=percent, limits = 0.175*c(-1,1))+
+  labs(y = "Población (%)", x= "Rango etário (años)") + 
+  scale_fill_manual(values=c("#3333ff", "#ffb266")) +
+  coord_flip() +
+  theme(legend.position="bottom") +
+  theme_bw()
+```
+
+##### ii.	Población Económicamente Activa
+
+[ALERTA: El formato DIA no considera este item, sin embargo, si el especialista lo considera necesario para dar cuenta de algún atributo importante del Área de Influencia, lo puede dejar] 
+
+De la información relativa a la Población Económicamente Activa del Área Censal, según el Censo de Población y Vivienda de 2017, es posible señalar que representaba a un `r 100*sum(p_n_e[p_n_e[,1]=="PEA",4],na.rm=T)/sum(p_n_e[p_n_e[,1]=="Total",4],na.rm=T)`% del total, de las cuales un `r 100*sum(p_n_e[p_n_e[,1]=="PEA",2],na.rm=T)/sum(p_n_e[p_n_e[,1]=="PEA",4],na.rm=T)`% eran hombres y un `r 100*sum(p_n_e[p_n_e[,1]=="PEA",3],na.rm=T)/sum(p_n_e[p_n_e[,1]=="PEA",4],na.rm=T)`% correspondía a mujeres. Un XX% de la PEA se encontraba trabajando por ingreso al momento de la encuesta, de los cuales un XX% eran hombres y un XX% mujeres. Seguido de esta categoría es posible observar que un XX% se encontraba buscando empleo, de los que un XX% eran hombres y un XX% eran mujeres, mientras que un 3,9% tenía empleo, pero estuvo de vacaciones, con licencia, en descanso laboral, etc. De los que un XX% eran hombres y un XX% eran mujeres. Por último, un XX% se encontraba trabajando sin pago para un familiar, de los que un XX% eran hombres y un 50% eran mujeres.
+
+
+```{r bipne}
+
+p_17 %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(p_17)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(p_17)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población económicamente activa y no activa") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+En relación con la población inactiva, definida como las personas de 15 años y más que durante el período de referencia de la encuesta no se encontraban ocupadas ni desocupadas (estudiantes, jubilados, otra situación), es posible señalar que ésta correspondía al XXX% del total, teniendo una amplia predominancia de mujeres con un XXX%, mientras que la población inactiva masculina era de XXX%.
+
+```{r notpne}
+p_n_e_not %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(p_n_e_not)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(p_17)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población inactiva, XXXXX") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+##### iii.	Rama de actividad económica y categoría ocupacional
+
+De la información relativa a rama de actividad de la población local, entendida como la distribución de la población ocupada según el sector de la economía en la cual se inserta, en este caso, sector primario, secundario y terciario; es posible señalar que la información censal mostró para el año 2017 que las actividades se concentraban en el sector XXX con un XXX%, en el que XXX% eran hombres y un XXX% eran mujeres. Específicamente, la población local se ocupaba mayormente en labores XXX, con un XXX. El sector XXX representaba un XXX% del total del sector, en el que un XXX% correspondía a hombres y un XXX% a mujeres. Las actividades que corresponden al sector XXX que se observaron en 2017 fueron XXX y XXX, con un XX% y XX% de representatividad del sector económico respectivamente.
+
+El sector XXX representaba también un XXX% del total, en el que un XXX% correspondía a hombres y un XXX% a mujeres. La actividad más extendida en el territorio observada en 2017 correspondiente al sector XXX fue la de XXX con un XX% del total del sector económico.
+
+```{r ramita}
+ggplot(subset(rama_o,Rama!="Sin información"), 
+       mapping = aes(x = Rama,
+                     y = Personas/sum(Personas),
+                     fill= Rama,
+                     label = scales::percent(Personas/sum(Personas)))) +
+  geom_bar(stat = "identity") +
+  labs(y = "Población", x= "Rama de ocupación") +
+  geom_text(position = position_dodge(width = .9),
+            hjust = -0.1,
+            size = 3) +
+  scale_y_continuous(labels=percent, limits = c(0,1))+
+  coord_flip() +
+  theme_bw()+ 
+  guides(fill=FALSE)
+```
+
+texto
+
+```{r tabrama}
+rama_o_t %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(rama_o_t)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(rama_o_t)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población de 15 años o más ocupada según Rama de Actividad, XXXXX") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+En relación con la información censal sobre categoría ocupacional, entendida como la distribución de la población ocupada según su inserción en el mercado de trabajo, ya sea, como patrón, cuenta-propia o asalariado, es posible señalar que del total de la Población Económicamente Activa que habitaba en el sector en 2017 la categoría más extendida en el territorio correspondía a la de XXX, con un XXX%, de los cuales un XXX% correspondía a hombres y un XXX% a mujeres. La siguiente categoría en importancia presente en el territorio correspondía a la de XXX con un XXX% del total de PEA en XXX, de los cuales un XXX% eran hombres y un XXX% eran mujeres.
+
+```{r cato}
+cat_o %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(cat_o)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(cat_o)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población de 15 años o más ocupada según Categoría Ocupacional, XXXXX") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+
+##### iii. Migraciones
+
+Al observar los datos respecto de la comuna de residencia de la población local del área urbana cinco años antes a la realización del Censo, éstos muestran que un `r 100*migr5[2,4]/migr5[nrow(migr5),4]`% de los censados residía en la misma comuna, mientras que un `r 100*migr5[migr5[,1]=="En otra comuna",4]/migr5[nrow(migr5),4]`% se encontraba con residencia en otra comuna. Las personas que aún no nacían representaban un `r 100*migr5[migr5[,1]=="Aún no nacía",4]/migr5[nrow(migr5),4]`% y los que residían en otros países representaban el `r 100*sum(migr_otro$Total,na.rm=T)/migr5[nrow(migr5),4]`% del total.
+
+```{r migra}
+migr5 %>% #data frame arbitrario
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(migr5)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(migr5)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Residencia el 2012") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+Cabe consignar que a partir de la información primaria obtenida, se identifica que en los últimos 5 años se ha observado un aumento de población proveniente de otros países, principalmente de oblación de origen haitiano, seguido en importancia, y en menor medida, por población de origen venezolano. Este fenómeno se observa exclusivamente en el área urbana.
+
+#### Dimensión Antropológica
+
+##### i.	Pueblos indígenas
+
+De acuerdo con la información censal, el `r 100*sum(p_o$Total,na.rm=T)/sum(base$Personas,na.rm=T)`% de la población del área urbana declara pertenecer a algún pueblo indígena u originario, con un `r 100*sum(p_o$Hombres,na.rm=T)/sum(p_o$Total,na.rm=T)`% de dicha población masculina y un `r 100*sum(p_o$Mujeres,na.rm=T)/sum(p_o$Total,na.rm=T)`% de población femenina. El pueblo indígena con mayor presencia corresponde al `r max_po[1,1]`, con un `r max_po[1,4]*100/sum(p_o[-nrow(p_o),4])`% del total.
+
+```{r indio_bulla_awante_el_weco}
+
+p_o %>% 
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(p_o)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población indígena") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+texto
+
+```{r indioplot}
+ggplot(p_o %>% 
+         filter(Pueblo!="Total") %>% 
+         gather("Sexo","Personas",2:3), aes(fill=Sexo, y=Personas, x=Pueblo)) + 
+    geom_bar(position="dodge", stat="identity") + 
+  theme(axis.text.x = element_text(angle = 45))
+```
+
+[ALERTA: Puede variar caso a caso] Por su parte, los residentes del sector XXXX declaran que no existen personas que adscriban a un GHPPI ni tampoco la presencia de actividades propias de algún grupo originario en el Área de Influencia del proyecto.  
+ 
+A continuación, se presenta la información correspondiente al Área de Influencia respecto al artículo 18 e. 10) sobre Grupos Humanos Pertenecientes a Pueblos Indígenas: 
+
+
+######	Tierras indígenas
+
+En el Área de Influencia no se identifican tierras indígenas, según información recogida a través del Sistema Integrado de Información CONADI (SIIC) a abril 2020
+
+######	Áreas de Desarrollo Indígena
+
+En el Área de Influencia no existen Áreas de Desarrollo Indígena, según consta en la Ley 19.253 y sus sucesivas modificaciones.  
+
+######	Organizaciones y grupos humanos indígenas
+XXX
+
+######	Uso y valoración de los recursos naturales
+XXX
+
+######	Prácticas culturales
+XXX
+
+######	Apropiación del medio ambiente
+XXX
+
+######	Patrimonio cultural indígena
+XXX
+
+######	Identidad grupal
+XXX
+
+######	Sistema de valores
+XXX
+
+######	Ritos comunitarios
+XXX
+
+######	Símbolos de pertenencia cultural
+XXX
+
+
+##### Festividades
+XXX
+
+####	Dimensión Socioeconómica
+
+##### i. Actividades productivas
+
+
+##### ii. Empleo
+
+
+
+####	Dimensión Bienestar Social Básico
+
+##### i. Educación
+XXXXX
+
+##### ii. Salud
+XXXXX
+
+##### iii. Vivienda
+
+De acuerdo con la información del Censo realizado el 2017, en el área de influencia se registran un total de XX viviendas, de las cuales un XX% corresponde a tipo casa, y un XX departamento en edificio, siendo éstas las principales tipologías.
+
+```{r t_v}
+t_v %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(t_v)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: tipo de vivienda") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+texto
+
+```{r materia}
+materialidad %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(materialidad)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Tipo de techo") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+
+##### iv. Acceso a servicios básicos
+
+En cuanto al origen del agua en el área urbana, el Censo 2017 indica que la gran parte de la población accede al agua por medio de red pública (XX%), mientras que el XX% acceden al agua mediante pozo o noria, el XX% accede por medio de camiones aljibes y el XX% mediante río, vertiente, estero, canal, lago etc.
+
+```{r o_a}
+ awa %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(awa)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(tab1)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Cantidad  de hogares según origen de agua consumida") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+texto
+
+```{r pika}
+
+
+#ggplot(subset(pika,Rama!="Sin información"), 
+#       mapping = aes(x = Rama,
+#                     y = Personas/sum(Personas),
+#                     fill= Rama,
+#                     label = scales::percent(Personas/sum(Personas)))) +
+#  geom_bar(stat = "identity") +
+#  labs(y = "Población", x= "Rama de ocupación") +
+#  geom_text(position = position_dodge(width = .9),
+#            hjust = -0.1,
+#            size = 3) +
+#  scale_y_continuous(labels=percent, limits = c(0,1))+
+#  coord_flip() +
+#  theme_bw()+ 
+#  guides(fill=FALSE)
+
+```
+
+
+## Conclusiones
+
+
+
+## Bibliografía

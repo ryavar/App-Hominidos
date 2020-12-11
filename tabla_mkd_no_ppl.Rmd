@@ -1,0 +1,302 @@
+---
+#title: "Tablas para informes"
+#author: "Joaquín Alvarez - Matías Parra"
+#date: "`r format(Sys.time(), '%d %B, %Y')`"
+output: 
+  word_document:
+    reference_docx: Lorem_ipsum.docx
+---
+```{r setup, include=FALSE,  warning=FALSE}
+knitr::opts_chunk$set(echo = F)
+library(tidyverse)
+library(knitr)
+library(flextable)
+library(officer)
+library(janitor)
+library(scales)
+
+def_cell <- fp_cell(border = fp_border(color="#0068B3")) #color de los bordes de celda
+def_par <- fp_par(text.align = "center") #alineado del texto
+def_text <- fp_text(font.family = "Calibri") #tipo de letra
+def_text_header <- update(def_text, bold = TRUE) #especificaciones del encabezado 
+
+viva <- read_rds("C:/Users/M/Desktop/GAC/APP MH/APP/mapa/shpExport2.rds")
+casen <- read_rds("C:/Users/M/Desktop/GAC/APP MH/APP/mapa/shpExport3.rds")
+
+cat_o <- casen %>% 
+  dplyr::select(`Población de 15 años o más ocupada según Rama de Actividad`=o15_mod, Hogares=Cantidad) %>% 
+  filter(is.na(`Población de 15 años o más ocupada según Rama de Actividad`)==F) %>% 
+  group_by(`Población de 15 años o más ocupada según Rama de Actividad`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  mutate(Porcentajes=Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+t_v <- viva %>% 
+  dplyr::select(`Tipo de vivienda` = P01_mod, Hogares) %>% 
+  filter(`Tipo de vivienda`!="Missing") %>% 
+  group_by(`Tipo de vivienda`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+paredes <- viva %>% 
+  dplyr::select(`Material de las paredes`=P03A_mod, Hogares) %>% 
+  filter(`Material de las paredes`!="Missing") %>%
+  group_by(`Material de las paredes`) %>%
+  summarise(Hogares=sum(Hogares)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+
+piso <- viva %>% 
+  dplyr::select(`Tipo de piso`=P03C_mod, Hogares) %>% 
+  filter(`Tipo de piso`!="Missing") %>%
+  group_by(`Tipo de piso`) %>%
+  summarise(Hogares=sum(Hogares,na.rm=T)) %>% 
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm=T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+techo <- viva %>% 
+  dplyr::select(`Tipo de techo`=P03B_mod, Hogares) %>%
+  filter(`Tipo de techo`!="Missing") %>% 
+  group_by(`Tipo de techo`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+pika <- casen %>% 
+  dplyr::select(`Origen de la electricidad`=v24_mod, Hogares=Cantidad) %>% 
+  group_by(`Origen de la electricidad`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+
+awa <- viva %>% 
+  filter(P05_mod!="No aplica / Sin información",P05_mod!="Missing") %>% 
+  dplyr::select(`Origen del agua`=P05_mod, Hogares) %>% 
+  group_by(`Origen del agua`) %>%
+  summarise(Hogares=sum(Hogares)) %>%
+  mutate(Proporción=100*Hogares/sum(Hogares,na.rm = T)) %>% 
+  adorn_totals(where="row",na.rm=T)
+```
+
+(inserte figura)
+
+##### ii. Uso del territorio
+XXX
+
+##### iii. Tenencia de la tierra
+XXX
+
+##### iv. Flujos de comunicación y transporte
+XXX
+
+
+#### Dimensión demográfica
+
+##### i.  Población
+
+Según la información registrada en el Censo de Población y Vivienda de 2017, no existen registros de personas que vivan dentro del área de Censal^[Como se hacía mención en el apartado de Área de Influencia, se distingue entre Área de Influencia y Área Censal. Mientras que el Área de Influencia refiere al espacio geográfico que interactúa directamente con el proyecto, el cual corresponde al Sector de XXXX, el Área Censal es el espacio geográfico que se corresponde a las localidades censales con las cuales interseca el área de influencia, es decir, el Área Censal contiene en su interior al Área de Influencia. Cabe señalar que se utiliza el nivel de “localidades” puesto que es el grado mayor de desagregación para obtener microdatos del censo de población y vivienda del 2017. Para mayores antecedentes, revisar capítulo de Área de Influencia para Medio Humano.].
+
+
+##### ii.	Población Económicamente Activa
+
+[ALERTA: No se registran datos de personas en el AI] 
+
+
+##### iii.	Rama de ocupación
+
+De la información relativa a rama de actividad de la población local, entendida como la distribución de la población ocupada según el sector de la economía en la cual se inserta, en este caso, sector primario, secundario y terciario; es posible señalar que la información censal mostró para el año 2017 que las actividades se concentraban en el sector XXX con un XXX%, en el que XXX% eran hombres y un XXX% eran mujeres. Específicamente, la población local se ocupaba mayormente en labores XXX, con un XXX. El sector XXX representaba un XXX% del total del sector, en el que un XXX% correspondía a hombres y un XXX% a mujeres. Las actividades que corresponden al sector XXX que se observaron en 2017 fueron XXX y XXX, con un XX% y XX% de representatividad del sector económico respectivamente.
+
+El sector XXX representaba también un XXX% del total, en el que un XXX% correspondía a hombres y un XXX% a mujeres. La actividad más extendida en el territorio observada en 2017 correspondiente al sector XXX fue la de XXX con un XX% del total del sector económico.
+
+
+
+En relación con la información censal sobre categoría ocupacional, entendida como la distribución de la población ocupada según su inserción en el mercado de trabajo, ya sea, como patrón, cuenta-propia o asalariado, es posible señalar que del total de la Población Económicamente Activa que habitaba en el sector en 2017 la categoría más extendida en el territorio correspondía a la de XXX, con un XXX%, de los cuales un XXX% correspondía a hombres y un XXX% a mujeres. La siguiente categoría en importancia presente en el territorio correspondía a la de XXX con un XXX% del total de PEA en XXX, de los cuales un XXX% eran hombres y un XXX% eran mujeres.
+
+```{r cato}
+cat_o %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>% 
+   style(pr_t = def_text_header, part = "header") %>%
+  bold(i=nrow(cat_o)) %>%  
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(cat_o)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Población de 15 años o más ocupada según Categoría Ocupacional, XXXXX") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+
+##### iii. Migraciones
+
+
+#### Dimensión Antropológica
+
+##### i.	Pueblos indígenas
+
+[ALERTA: Puede variar caso a caso] Por su parte, los residentes del sector XXXX declaran que no existen personas que adscriban a un GHPPI ni tampoco la presencia de actividades propias de algún grupo originario en el Área de Influencia del proyecto.  
+ 
+A continuación, se presenta la información correspondiente al Área de Influencia respecto al artículo 18 e. 10) sobre Grupos Humanos Pertenecientes a Pueblos Indígenas: 
+
+
+######	Tierras indígenas
+
+En el Área de Influencia no se identifican tierras indígenas, según información recogida a través del Sistema Integrado de Información CONADI (SIIC) a abril 2020
+
+######	Áreas de Desarrollo Indígena
+
+En el Área de Influencia no existen Áreas de Desarrollo Indígena, según consta en la Ley 19.253 y sus sucesivas modificaciones.  
+
+######	Organizaciones y grupos humanos indígenas
+XXX
+
+######	Uso y valoración de los recursos naturales
+XXX
+
+######	Prácticas culturales
+XXX
+
+######	Apropiación del medio ambiente
+XXX
+
+######	Patrimonio cultural indígena
+XXX
+
+######	Identidad grupal
+XXX
+
+######	Sistema de valores
+XXX
+
+######	Ritos comunitarios
+XXX
+
+######	Símbolos de pertenencia cultural
+XXX
+
+
+##### Festividades
+XXX
+
+####	Dimensión Socioeconómica
+
+##### i. Actividades productivas
+
+
+##### ii. Empleo
+
+
+
+####	Dimensión Bienestar Social Básico
+
+##### i. Educación
+XXXXX
+
+##### ii. Salud
+XXXXX
+
+##### iii. Vivienda
+
+De acuerdo con la información del Censo realizado el 2017, en el área de influencia se registran un total de XX viviendas, de las cuales un XX% corresponde a tipo casa, y un XX departamento en edificio, siendo éstas las principales tipologías.
+
+```{r t_v}
+t_v %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(t_v)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(t_v)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: tipo de vivienda") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+texto
+
+```{r techo}
+techo %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(techo)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(techo)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Tipo de techo") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+
+##### iv. Acceso a servicios básicos
+
+En cuanto al origen del agua en el área urbana, el Censo 2017 indica que la gran parte de la población accede al agua por medio de red pública (XX%), mientras que el XX% acceden al agua mediante pozo o noria, el XX% accede por medio de camiones aljibes y el XX% mediante río, vertiente, estero, canal, lago etc.
+
+```{r o_a}
+ awa %>%
+  as.data.frame() %>% 
+  format(decimal.mark=",", big.mark = ".") %>% 
+  flextable() %>% 
+  style(pr_c = def_cell, pr_p = def_par, pr_t = def_text, part = "all")  %>%
+  style(pr_t = def_text_header, part = "header") %>% 
+  bold(i=nrow(awa)) %>%
+  bg(bg = "#BFBFBF", part = "header") %>%
+  width(width=6.5315/ncol(awa)) %>% 
+  #add_footer_lines( "Fuente: Censo 2017") %>% 
+  fontsize(size = 9, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "footer") %>% 
+  set_caption("Tabla #: Cantidad  de hogares según origen de agua consumida") %>% 
+  fontsize(size = 10, part = "footer") %>% 
+  font(fontname = "Calibri",part = "footer") %>% 
+  style(pr_p = def_par, part = "header",pr_t = def_text_header) 
+```
+
+texto
+
+```{r pika}
+
+
+#ggplot(subset(pika,Rama!="Sin información"), 
+#       mapping = aes(x = Rama,
+#                     y = Personas/sum(Personas),
+#                     fill= Rama,
+#                     label = scales::percent(Personas/sum(Personas)))) +
+#  geom_bar(stat = "identity") +
+#  labs(y = "Población", x= "Rama de ocupación") +
+#  geom_text(position = position_dodge(width = .9),
+#            hjust = -0.1,
+#            size = 3) +
+#  scale_y_continuous(labels=percent, limits = c(0,1))+
+#  coord_flip() +
+#  theme_bw()+ 
+#  guides(fill=FALSE)
+
+```
+
+
+## Conclusiones
+
+
+
+## Bibliografía
